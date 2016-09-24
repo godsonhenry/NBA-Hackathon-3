@@ -5,26 +5,100 @@ date: "September 24, 2016"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+Setup  
+Reading in all the relevant data. 
+```{r}
+library(XML)
+playbyplay = read.table('Hackathon_play_by_play.txt')
+players_and_teams = read.table('Hackathon_player_names_matched_team.txt')
+hustle = read.table('Hackathon_playoff_hustle_stats_2016.txt')
+league_averages = read.csv('league_averages.csv')
 ```
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+Substitutions
+Determining the plays in which a substitution happend  
+```{r}
+substitution_plays = playbyplay[which(playbyplay$'Event_Description' == 'Substitution'),]
+View(substitution_plays)
+plays_between_subs = function(data, player, game_id) {
+  plays_in_game = data[which(data$Game_id == game_id),]
+  name_split = strsplit(player, " ")[[1]]
+  regex = grepl(paste(name_split[2:length(name_split)], collapse = " "), plays_in_game$Description)
+  return (plays_in_game[regex,])
+}
+x = plays_between_subs(playbyplay, "Kirk Hinrich", 20600001)
 ```
 
-## Including Plots
+PER Tracker
+```{r}
+calculate_per = function(indiv_box_score, team_box_score, league) {
+  factor = (2/3) - (0.5 * (league$AST/league$FG)) / (2 * (league$FG/league$FT))
+  vop = league$PTS / (league$FGA - league$ORB + league$TOV + 0.44* league$FTA)
+  drb_percentage = (league$TRB - league$ORB) / league$TRB
+  uPER = indiv_box_score$threes 
+  + (2/3)*indiv_box_score$assists 
+  + (2 - factor * (team_box_score$assists/team_box_score$field_goals_made)) * indiv_box_score$field_goals_made 
+  + (indiv_box_score$free_throws*0.5*(1 + (1 - (team_box_score$assists/team_box_score$field_goals_made)) 
+  + (2/3)*(team_box_score$assists/team_box_score$field_goals_made))) 
+  - vop * indiv_box_score$turnovers 
+  - vop * drb_percentage * (indiv_box_score$field_goals_attempted - indiv_box_score$field_goals_made) 
+  - vop * 0.44 * (0.44+(0.56*drb_percentage)) * (indiv_box_score$free_throws_attempted - indiv_box_score$free_throws_made)
+  + vop * drb_percentage * indiv_box_score$offensive_rebounds
+  + vop * indiv_box_score$steals
+  + vop * drb_percentage * indiv_box_score$blocks
+  - indiv_box_score$fouls * ((league$free_throws_made/league_fouls)-0.44 * (league$free_throws_attempted/league_fouls) * vop)
+  PER = uPER * (league$pace/team_box_score$pace)
+  return (PER)
+}
+running_per = function(team_acronym, playbyplay, players_and_teams, player, game_id) {
+  all_plays = playbyplay[which(playbyplay$Game_id == game_id),]
+  players_plays = plays_between_subs(all_plays, player, game_id)
+  team = players_and_teams[which(players_and_teams$Game_id == game_id & players_and_teams$Name == player),'Team_Name']
+  game_year = strsplit(as.character(unique(all_plays$Date_EST)), split = '-')[[1]][1]
+  game_month = strsplit(as.character(unique(all_plays$Date_EST)), split = '-')[[1]][2]
+  if (game_month >= 10) {
+    year = as.character(as.numeric(game_year) + 1) 
+  }
+  else {
+    year = as.character(as.numeric(game_year))
+  }
+  player_box_score = data.frame(matrix(ncol = 11))
+  colnames(player_box_score) = c('threes', 'assists', 'turnovers', 'field_goals_attempted', 'field_goals_made', 'free_throws_attempted', 'rebound%', 'steals', 'blocks', 'fouls')
+  team_box_score = data.frame(matrix(ncol = 4))
+  colnames(team_box_score) = c('assists', 'field_goals_made', 'free_throws_made', 'pace')
+  url = paste("http://www.espn.com/nba/hollinger/teamstats/_/year/", year, sep = "")
+  yearly_team_stats = data.frame(readHTMLTable(url))
+  team = strsplit(as.character(team), split = ' ')[[1]]
+  city = team[1:length(team)-1]
+  team_name = team[length(team)]
+  team_box_score$pace = yearly_team_stats[which(grepl(city, yearly_team_stats$'NULL.V2') | grepl(team_name, yearly_team_stats$'NULL.V2')),]$'NULL.V3'
+  player_pers = c()
+  player_box_score$'field_goals_attempted' = 0
+  player_box_score$'field_goals_made' = 0
+  for (play_index in 1:nrow(all_plays)) {
+    player_box_score = parse_play(team_acronym, player, player_box_score, team_box_score, all_plays[play_index,])
+    print(player_box_score$field_goals_made)
+    print(player_box_score$field_goals_attempted)
+    player_pers = c(player_pers, player_box_score$field_goals_made/player_box_score$field_goals_attempted)
+  }
+  return (player_pers)
+}
 
-You can also embed plots, for example:
+parse_play = function(acronym, player, player_box_score, team_box_score, play_vector) {
+  player_split = strsplit(player, " ")[[1]]
+  last_name = player_split[2:length(player_split)]
+  if (grepl(last_name, play_vector$'Description')) {
+    if (grepl("Made", play_vector$'Description')) {
+      player_box_score$field_goals_made = player_box_score$'field_goals_made' + 1
+      player_box_score$field_goals_attempted = player_box_score$'field_goals_attempted' + 1
+    }
+      if (grepl("Missed", play_vector$'Description')) {
+      player_box_score$field_goals_attempted = player_box_score$'field_goals_attempted' + 1
+    }
+  }
+  return (player_box_score)
+}
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+running_per('CHI', playbyplay, players_and_teams, 'Chris Duhon', 20600001)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

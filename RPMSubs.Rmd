@@ -3,7 +3,6 @@ title: "RPMSubs"
 author: "Rohan"
 date: "September 24, 2016"
 output: html_document
-Goal: Find RPM (Real Plus/Minus) for a team throughout game, and impact of substitutions
 ---
 
 Read Data
@@ -14,38 +13,62 @@ playbyplay <- read.table("Hackathon_play_by_play.txt")
 players_teams <- read.table("Hackathon_player_names_matched_team.txt")
 ```
 
-First, RPM of a player throughout a game
+Tabulating substitutions
 ```{r}
+temp <- playbyplay[which(playbyplay$Event_Description == "Substitution"),]
+subsdata<- matrix(0,nrow = nrow(temp))
+subsdata <-data.frame(subsdata)
+subsdata <- cbind (subsdata,temp)
+drops <- c("Event_Msg_Type","Event_Num","Period","Home_Team_id","Away_Team_id","WC_Time","SC_Time","Date_EST","Event_Description","subsdata")
+subsdata <- subsdata[,!names(subsdata) %in% drops]
 
-```
-
-Substitutions
-```{r}
-subsdata<- playbyplay[which(playbyplay$Event_Description == "Substitution"),]
-subsdata<- subset(subsdata,select = -c(Event_Msg_Type,Event_Num,Period,Home_Team_id,Away_Team_id,WC_Time,SC_Time,Date_EST,Event_Description))
+subsdata$Description <- as.character(subsdata$Description)
 subsdata[c("Team","sub_in","sub_out")]<- NA
 ```
 
 ```{r Find Names of Subs}
 find_subs <- function(str,game_id) {
   # Return a 1x3 vector, [0] = team name, [1] = full name of subbed in, [2] = full name of subbed out
-  in_name <- unlist(strsplit(str, " "))[6] #This person starts playing i.e. goes in
-  out_name <- unlist(strsplit(str, " "))[2] #This person stops playing i.e. comes out
-  #print(in_name)
-  #print(out_name)
+  whole_str <- unlist(strsplit(str, " "))
+  j <- 1
+  while (j <= length(whole_str)) {
+    if(whole_str[j] == "Substitution")
+      out_name <- whole_str[j-1]
+    if(whole_str[j] == "by")
+      in_name <- whole_str[j+1]
+    j <- j+1  
+  }
   temp_name_space <- players_teams[which(players_teams$Game_id == game_id), "Name"]
-  #print(temp_name_space)
+  
+  found_in <- FALSE
+  found_out <- FALSE
   for(name in temp_name_space) {
-    #print(name)
     if(grepl(in_name,name)){
-      real_in_name <- name
+      in_name <- name
+      found_in <- TRUE
     }
     if(grepl(out_name,name)){
-      real_out_name <- name
+      out_name <- name
+      found_out <- TRUE
     }
+    if(found_in && found_out)
+      break
   }
-  
-  res <- c(team, real_in_name,real_out_name)
+  subspace_by_gid <- players_teams[which(players_teams$Game_id == game_id),]
+  team <-(subspace_by_gid[which(subspace_by_gid$Name == in_name),]$Team_Name)
+  res <- c(as.character(team),in_name,out_name)
   return (res)
 }
 ```
+
+```{r}
+i = 1
+while(i<=nrow(subsdata)) {
+  dat <- find_subs(subsdata[i,7],subsdata[i,1])
+  subsdata[i,8] <- dat[1]
+  subsdata[i,9] <- dat[2]
+  subsdata[i,10] <- dat[3]
+  i<-i+1
+}
+```
+
