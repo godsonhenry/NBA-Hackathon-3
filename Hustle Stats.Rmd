@@ -5,26 +5,25 @@ date: "September 24, 2016"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+Setup  
+Reading in all the relevant data. 
+```{r}
+playbyplay = read.table('Hackathon_play_by_play.txt')
+hustle = read.table('Hackathon_playoff_hustle_stats_2016.txt')
 ```
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+Substitutions
+Determining the plays in which a substitution happend  
+```{r}
+substitution_plays = playbyplay[which(playbyplay$'Event_Description' == 'Substitution'),]
+View(substitution_plays)
+plays_between_subs = function(data, player, game_id) {
+  plays_in_game = data[which(data$Game_id == game_id),]
+  name_split = strsplit(player, " ")[[1]]
+  regex = grepl(paste(name_split[2:length(name_split)], collapse = " "), plays_in_game$Description)
+  print(regex)
+  return (plays_in_game[regex,])
+}
+x = plays_between_subs(substitution_plays, "Kirk Hinrich", 20600001)
 ```
 
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
