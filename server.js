@@ -13,12 +13,26 @@ app.use(express.static('client'));
 
 app.get('/getData', function(req, res) {
 	var result = {};
-	//TODO: Update to the name of our csv
-	fs.createReadStream('sample.csv')
+
+	fs.createReadStream('fgpct.csv')
 	.pipe(csv())
   	.on('data', function (data) {
-    	console.log('Name: %s Age: %s', data.NAME, data.AGE);
-    	result[data.NAME] = data;
+  		console.log(JSON.stringify(data));
+    	result[data.x] = data;
+  	})
+  	.on('end', function(){
+  		res.send(result);
+  	});
+});
+
+app.get('/getSpeedData', function(req, res) {
+	var result = {};
+
+	fs.createReadStream('JamalCraw.csv')
+	.pipe(csv())
+  	.on('data', function (data) {
+  		console.log(JSON.stringify(data));
+    	result[data.x] = data;
   	})
   	.on('end', function(){
   		res.send(result);

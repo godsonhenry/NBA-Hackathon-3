@@ -7,7 +7,6 @@
   <link rel="stylesheet" href="styles/angular-material.css">
 </head>
 <body ng-app="nba-hackathon">
-
   <!-- Main page of the app -->
   <div ng-controller="MainCtrl">
     <md-content>
@@ -17,18 +16,35 @@
     </md-content>
     <br>
 
+    <!-- <div>TODO: EDIT THIS TEXT Select which teams you would like to see Data for: </div>
+    <div layout="row">
+      <md-button ng-click="selectAll" flex>Select all teams</md-button>
+      <md-button ng-click="selectEast" flex>Select Eastern Conference</md-button>
+      <md-button ng-click="selectWest" flex>Select Western Conference</md-button>
+      <div>Dropdown to choose a different subset of teams here</div>
+    </div> -->
+
     <div ng-if="isLoading">
       Loading some dank graphs
     </div>
-
     <div ng-if="!isLoading">
-      {{newData}}
+      <canvas id="line" class="chart chart-line" chart-data="data" chart-labels="labels" chart-series="series" chart-options="options" chart-dataset-override="datasetOverride" chart-click="onClick">
+      </canvas>
+
+      <h2>
+        <b> Player Speed vs. Time since entering game </b>
+      </h2>
+      <p> Here we take a look at how player speed varies in relation to the amount of time since they were subbed in for that stint on the floor. </p>
+
+      <!-- Graph of player speed vs. time since substitution -->
+      <canvas id="speedLine" class="chart chart-line" chart-data="speed.data" chart-labels="speed.labels" chart-series="speed.series" chart-options="speed.options" chart-dataset-override="speed.datasetOverride">
+      </canvas> 
     </div>
 
-    <canvas id="line" class="chart chart-line" chart-data="data" chart-labels="labels" chart-series="series" chart-options="options" chart-dataset-override="datasetOverride" chart-click="onClick"
-    </canvas> 
   </div>
 
+  <script type="text/javascript" src="vendor/jquery.min.js"></script>
+  <script type="text/javascript" src="vendor/lodash.min.js"></script>
   <script type="text/javascript" src="vendor/angular.min.js"></script>
   <script type="text/javascript" src="vendor/Chart.min.js"></script>
   <script type="text/javascript" src="vendor/angular-chart.min.js"></script>
@@ -36,6 +52,7 @@
   <script type="text/javascript" src="vendor/angular-resource.min.js"></script>
   <script type="text/javascript" src="vendor/angular-animate.js"></script> 
   <script type="text/javascript" src="vendor/angular-material.js"></script>
+  <script type="text/javascript" src="vendor/q.js"></script>
   <script type="text/javascript" src="app.js"></script>
 </body>
 </html>

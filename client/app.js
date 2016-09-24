@@ -3,11 +3,11 @@ angular.module('nba-hackathon',
 	'ngMaterial',
 	'ngAria',
 	'ngAnimate',
-	'ngResource']
+	'ngResource',]
 )
 
 .config(function(ChartJsProvider){
-	ChartJsProvider.setOptions({ colors : [ '#803690', '#00ADF9', '#DCDCDC', '#46BFBD', '#FDB45C', '#949FB1', '#4D5360'] });
+	ChartJsProvider.setOptions({ colors : [ '#803690', '#D71F55', '#DCDCDC', '#46BFBD', '#FDB45C', '#949FB1', '#4D5360'] });
 })
 
 .constant("TeamNames", {
@@ -210,8 +210,9 @@ angular.module('nba-hackathon',
 	red: "#D71F55"
 })
 
-.controller("MainCtrl", function($scope, $resource, TeamNames, TeamColors) {
+.controller("MainCtrl", function($scope, $resource, $q, TeamNames, TeamColors) {
 
+	//Resource to get our data from the api route
 	var Data = $resource('/getData', {}, {
 		get: {
 			method: "GET",
@@ -219,64 +220,106 @@ angular.module('nba-hackathon',
 		}
 	});
 
-	$scope.isLoading = true;
-	//Get all the data from the server
-	Data.get({}, function(result){
-		debugger;
-		$scope.newData = result;
-		$scope.isLoading = false;
-
-		setupEverything();
+	var SpeedData = $resource('/getSpeedData', {}, {
+		get: {
+			method: "GET",
+			params: {}
+		}
 	});
 
-	function setupEverything(){
-		$scope.allTeams = TeamNames.all;
-		$scope.selected = TeamNames.all; //Default to selecting all teams
+	//Boolean to check if we've loaded
+	$scope.isLoading = true;
 
-		$scope.selectAll = function() {
-			$scope.selected = TeamNames.all;
-			reloadData();
-		};
+	var setupSpeed = function(){
+		$scope.speed = {};
+		$scope.speed.labels = [];
+		_.forEach($scope.speedData, function(datum) {
+			var xVal = parseFloat(datum["x"]) * 10;
+			$scope.speed.labels.push(Math.round(xVal) / 10 ); 
+		});
 
-		$scope.selectEast = function(){
-			$scope.selected = TeamNames.east;
-			reloadData();
-		};
-
-		$scope.selectWest = function(){
-			$scope.selected = TeamNames.west;
-			reloadData();
-		};
-
-		var reloadData = function(){
-
-		};
-
-		$scope.labels = ["January", "February", "March", "April", "May", "June", "July"];
-	  	$scope.series = ['Series A', 'Series B'];
-	  	$scope.data = [
-	    	[65, 59, 80, 81, 56, 55, 40],
-	    	[28, 48, 40, 19, 86, 27, 90]
+	  	var speedYData = _.map($scope.speedData, "y");
+	  	$scope.speed.data = [
+	    	speedYData
 	  	];
 	  	
-	  	$scope.datasetOverride = [{ yAxisID: 'y-axis-1' }, { yAxisID: 'y-axis-2' }];
+	  	$scope.speed.datasetOverride = [{ yAxisID: 'y-axis-1' }];
+	  	$scope.speed.options = {
+	    	scales: {
+		      	yAxes: [{
+			          	id: 'y-axis-1',
+			          	type: 'linear',
+			          	display: true,
+			          	position: 'left',
+			          	scaleLabel: {
+					        display: true,
+				        	labelString: 'Speed (some units)'
+				      	}
+		        	}
+		      	],
+		      	xAxes: [{
+		          	scaleLabel: {
+				        display: true,
+			        	labelString: 'Time since entering game'
+			      	}
+		      	}]
+	    	}
+	  	};
+	};
+
+	var setupMain = function() {
+		$scope.labels = _.map($scope.newData, "x")
+	  	var yData = _.map($scope.newData, function(datum){
+	  		return parseFloat(datum["FG"]);
+	  	});
+
+	  	var inPlayData = [];
+
+	  	$scope.data = [ yData , ];
+	  	
+	  	$scope.datasetOverride = [{ yAxisID: 'y-axis-1' }];
 	  	$scope.options = {
 	    	scales: {
 		      	yAxes: [{
 			          	id: 'y-axis-1',
 			          	type: 'linear',
 			          	display: true,
-			          	position: 'left'
-		        	},
-			        {
-			          	id: 'y-axis-2',
-			          	type: 'linear',
-			          	display: true,
-			          	position: 'right'
-			        }
-		      	]
+			          	position: 'left',
+			          	scaleLabel: {
+					        display: true,
+				        	labelString: 'Field Goal Percentage'
+				      	}
+		        	}
+		      	],
+		      	xAxes: [{
+		          	scaleLabel: {
+				        display: true,
+			        	labelString: 'Play Number'
+			      	}
+		      	}]
 	    	}
 	  	};
-	}
+	};
+
+	//Get all the speed data from the server
+	var speedPromise = SpeedData.get({}, function(result){
+		$scope.speedData = result;
+		setupSpeed();
+	}).$promise;
+
+		
+
+	//Get all the data from the server
+	var allPromise = Data.get({}, function(result){
+		$scope.newData = result;
+		setupMain();
+	}).$promise;
+
+
+	$q.all([allPromise, speedPromise]).then(function(){
+		$scope.isLoading = false;
+	});
+
+	
 	
 });
