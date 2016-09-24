@@ -8,8 +8,11 @@ output: html_document
 Setup  
 Reading in all the relevant data. 
 ```{r}
+library(XML)
 playbyplay = read.table('Hackathon_play_by_play.txt')
+players_and_teams = read.table('Hackathon_player_names_matched_team.txt')
 hustle = read.table('Hackathon_playoff_hustle_stats_2016.txt')
+league_averages = read.csv('league_averages.csv')
 ```
 
 Substitutions
@@ -21,9 +24,79 @@ plays_between_subs = function(data, player, game_id) {
   plays_in_game = data[which(data$Game_id == game_id),]
   name_split = strsplit(player, " ")[[1]]
   regex = grepl(paste(name_split[2:length(name_split)], collapse = " "), plays_in_game$Description)
-  print(regex)
   return (plays_in_game[regex,])
 }
-x = plays_between_subs(substitution_plays, "Kirk Hinrich", 20600001)
+x = plays_between_subs(playbyplay, "Kirk Hinrich", 20600001)
+```
+
+PER Tracker
+```{r}
+calculate_per = function(indiv_box_score, team_box_score, league) {
+  factor = (2/3) - (0.5 * (league$AST/league$FG)) / (2 * (league$FG/league$FT))
+  vop = league$PTS / (league$FGA - league$ORB + league$TOV + 0.44* league$FTA)
+  drb_percentage = (league$TRB - league$ORB) / league$TRB
+  uPER = indiv_box_score$threes 
+  + (2/3)*indiv_box_score$assists 
+  + (2 - factor * (team_box_score$assists/team_box_score$field_goals_made)) * indiv_box_score$field_goals_made 
+  + (indiv_box_score$free_throws*0.5*(1 + (1 - (team_box_score$assists/team_box_score$field_goals_made)) 
+  + (2/3)*(team_box_score$assists/team_box_score$field_goals_made))) 
+  - vop * indiv_box_score$turnovers 
+  - vop * drb_percentage * (indiv_box_score$field_goals_attempted - indiv_box_score$field_goals_made) 
+  - vop * 0.44 * (0.44+(0.56*drb_percentage)) * (indiv_box_score$free_throws_attempted - indiv_box_score$free_throws_made)
+  + vop * drb_percentage * indiv_box_score$offensive_rebounds
+  + vop * indiv_box_score$steals
+  + vop * drb_percentage * indiv_box_score$blocks
+  - indiv_box_score$fouls * ((league$free_throws_made/league_fouls)-0.44 * (league$free_throws_attempted/league_fouls) * vop)
+  PER = uPER * (league$pace/team_box_score$pace)
+  return (PER)
+}
+running_per = function(team_acronym, playbyplay, players_and_teams, player, game_id) {
+  all_plays = playbyplay[which(playbyplay$Game_id == game_id),]
+  players_plays = plays_between_subs(all_plays, player, game_id)
+  team = players_and_teams[which(players_and_teams$Game_id == game_id & players_and_teams$Name == player),'Team_Name']
+  game_year = strsplit(as.character(unique(all_plays$Date_EST)), split = '-')[[1]][1]
+  game_month = strsplit(as.character(unique(all_plays$Date_EST)), split = '-')[[1]][2]
+  if (game_month >= 10) {
+    year = as.character(as.numeric(game_year) + 1) 
+  }
+  else {
+    year = as.character(as.numeric(game_year))
+  }
+  player_box_score = data.frame(matrix(ncol = 11))
+  colnames(player_box_score) = c('threes', 'assists', 'turnovers', 'field_goals_attempted', 'field_goals_made', 'free_throws_attempted', 'offensive_rebounds', 'steals', 'blocks', 'fouls')
+  team_box_score = data.frame(matrix(ncol = 4))
+  colnames(team_box_score) = c('assists', 'field_goals_made', 'free_throws_made', 'pace')
+  url = paste("http://www.espn.com/nba/hollinger/teamstats/_/year/", year, sep = "")
+  yearly_team_stats = data.frame(readHTMLTable(url))
+  team = strsplit(as.character(team), split = ' ')[[1]]
+  city = team[1:length(team)-1]
+  team_name = team[length(team)]
+  team_box_score$pace = yearly_team_stats[which(grepl(city, yearly_team_stats$'NULL.V2') | grepl(team_name, yearly_team_stats$'NULL.V2')),]$'NULL.V3'
+  player_pers = c()
+  for (play_index in 1:nrow(all_plays)) {
+    results = parse_play(team_acronym, player, player_box_score, team_box_score, all_plays[play_index,])[1]
+    player_box_score = results[1]
+    team_box_score = results[2]
+    player_pers = c(player_pers, calculate_per)
+  }
+  all_plays$player_per = player_pers
+  return (all_plays)
+}
+
+parse_play = function(acronym, player, player_box_score, team_box_score, play_vector) {
+  affecting_events = c(2,4,6,3,1,5,7)
+  if (play_vector$Event_Msg_Type %in% affecting_events) {
+    if (grepl(acronym, play_vector$'Description')) {
+      if (play_vector$Event_Msg_Type == 2) {
+        if player_box_score$field_goals_attempted = player_box_score$field_goals_attempted += 1 
+      }
+    }
+  }
+}
+for (num in affecting_events) {
+  print(num)  
+  print(unique(playbyplay[which(playbyplay$Event_Msg_Type == num),'Description']))
+}
+running_per('CHI', playbyplay, players_and_teams, 'Chris Duhon', 20600001)
 ```
 
