@@ -1,0 +1,41 @@
+<head>
+  <meta charset="utf-8">
+  <title>NBA Hackathon App</title>
+  <meta name="description" content="">
+  <!-- Add stylesheets as needed -->
+  <link rel="stylesheet" href="styles/app.css">
+  <link rel="stylesheet" href="styles/angular-material.css">
+</head>
+<body ng-app="nba-hackathon">
+
+  <!-- Main page of the app -->
+  <div ng-controller="MainCtrl">
+    <md-content>
+      <md-toolbar class="main-header">
+        <h1 style="padding-left: 5px"> Player Fatigue and Substitutions - NBA Hackathon 2016 </h1>
+      </md-toolbar>
+    </md-content>
+    <br>
+
+    <div ng-if="isLoading">
+      Loading some dank graphs
+    </div>
+
+    <div ng-if="!isLoading">
+      {{newData}}
+    </div>
+
+    <canvas id="line" class="chart chart-line" chart-data="data" chart-labels="labels" chart-series="series" chart-options="options" chart-dataset-override="datasetOverride" chart-click="onClick"
+    </canvas> 
+  </div>
+
+  <script type="text/javascript" src="vendor/angular.min.js"></script>
+  <script type="text/javascript" src="vendor/Chart.min.js"></script>
+  <script type="text/javascript" src="vendor/angular-chart.min.js"></script>
+  <script type="text/javascript" src="vendor/angular-aria.js"></script> 
+  <script type="text/javascript" src="vendor/angular-resource.min.js"></script>
+  <script type="text/javascript" src="vendor/angular-animate.js"></script> 
+  <script type="text/javascript" src="vendor/angular-material.js"></script>
+  <script type="text/javascript" src="app.js"></script>
+</body>
+</html>
