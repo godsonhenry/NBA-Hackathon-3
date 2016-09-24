@@ -1,0 +1,23 @@
+{
+  "name": "nba-hackathon",
+  "version": "1.0.0",
+  "description": "Project for NBA Hackathon",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rohan-n/NBA-Hackathon.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/rohan-n/NBA-Hackathon/issues"
+  },
+  "homepage": "https://github.com/rohan-n/NBA-Hackathon#readme",
+  "dependencies": {
+    "angular-chart.js": "^1.0.3",
+    "express": "^4.14.0"
+  }
+}
