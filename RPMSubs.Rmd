@@ -1,0 +1,51 @@
+---
+title: "RPMSubs"
+author: "Rohan"
+date: "September 24, 2016"
+output: html_document
+Goal: Find RPM (Real Plus/Minus) for a team throughout game, and impact of substitutions
+---
+
+Read Data
+```{r}
+install.packages('plyr')
+library('plyr')
+playbyplay <- read.table("Hackathon_play_by_play.txt")
+players_teams <- read.table("Hackathon_player_names_matched_team.txt")
+```
+
+First, RPM of a player throughout a game
+```{r}
+
+```
+
+Substitutions
+```{r}
+subsdata<- playbyplay[which(playbyplay$Event_Description == "Substitution"),]
+subsdata<- subset(subsdata,select = -c(Event_Msg_Type,Event_Num,Period,Home_Team_id,Away_Team_id,WC_Time,SC_Time,Date_EST,Event_Description))
+subsdata[c("Team","sub_in","sub_out")]<- NA
+```
+
+```{r Find Names of Subs}
+find_subs <- function(str,game_id) {
+  # Return a 1x3 vector, [0] = team name, [1] = full name of subbed in, [2] = full name of subbed out
+  in_name <- unlist(strsplit(str, " "))[6] #This person starts playing i.e. goes in
+  out_name <- unlist(strsplit(str, " "))[2] #This person stops playing i.e. comes out
+  #print(in_name)
+  #print(out_name)
+  temp_name_space <- players_teams[which(players_teams$Game_id == game_id), "Name"]
+  #print(temp_name_space)
+  for(name in temp_name_space) {
+    #print(name)
+    if(grepl(in_name,name)){
+      real_in_name <- name
+    }
+    if(grepl(out_name,name)){
+      real_out_name <- name
+    }
+  }
+  
+  res <- c(team, real_in_name,real_out_name)
+  return (res)
+}
+```
