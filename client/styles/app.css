@@ -1,0 +1,8 @@
+md-toolbar.main-header {
+	background-color: #006AB8
+}
+
+canvas {
+	/*padding: 5px;*/
+	width: max-width;
+}
