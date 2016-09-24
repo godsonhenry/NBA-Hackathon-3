@@ -4,25 +4,29 @@
   <meta name="description" content="">
   <!-- Add stylesheets as needed -->
   <link rel="stylesheet" href="styles/app.css">
+  <link rel="stylesheet" href="styles/angular-material.css">
 </head>
 <body ng-app="nba-hackathon">
 
   <!-- Main page of the app -->
   <div ng-controller="MainCtrl">
     <md-content>
-      <md-toolbar class="md-accent">
-        <span> Player Fatigue and Substitutions </span>
+      <md-toolbar>
+        <h2> Player Fatigue and Substitutions </h2>
       </md-toolbar>
     </md-content>
-    <div> {{greeting}} </div>
+    <br>
+
+    <canvas id="line" class="chart chart-line" chart-data="data" chart-labels="labels" chart-series="series" chart-options="options" chart-dataset-override="datasetOverride" chart-click="onClick"
+    </canvas> 
   </div>
 
-  <script type="text/javascript" src="../node_modules/angular/angular.min.js"></script>
-  <script type="text/javascript" src="../node_modules/chart.js/Chart.min.js"></script>
-  <script type="text/javascript" src="../node_modules/angular-chart.js/dist/angular-chart.min.js"></script>
-  <script type="text/javascript" src="../node_modules/angular-aria/angular-aria.js"></script> 
-  <script type="text/javascript" src="../node_modules/angular-animate/angular-animate.js"></script> 
-  <script type="text/javascript" src="../node_modules/angular-material/angular-material.js"></script>
-  <script src="app.js"></script>
+  <script type="text/javascript" src="vendor/angular.min.js"></script>
+  <script type="text/javascript" src="vendor/Chart.min.js"></script>
+  <script type="text/javascript" src="vendor/angular-chart.min.js"></script>
+  <script type="text/javascript" src="vendor/angular-aria.js"></script> 
+  <script type="text/javascript" src="vendor/angular-animate.js"></script> 
+  <script type="text/javascript" src="vendor/angular-material.js"></script>
+  <script type="text/javascript" src="app.js"></script>
 </body>
 </html>
