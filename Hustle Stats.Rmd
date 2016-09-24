@@ -63,7 +63,7 @@ running_per = function(team_acronym, playbyplay, players_and_teams, player, game
     year = as.character(as.numeric(game_year))
   }
   player_box_score = data.frame(matrix(ncol = 11))
-  colnames(player_box_score) = c('threes', 'assists', 'turnovers', 'field_goals_attempted', 'field_goals_made', 'free_throws_attempted', 'offensive_rebounds', 'steals', 'blocks', 'fouls')
+  colnames(player_box_score) = c('threes', 'assists', 'turnovers', 'field_goals_attempted', 'field_goals_made', 'free_throws_attempted', 'rebound%', 'steals', 'blocks', 'fouls')
   team_box_score = data.frame(matrix(ncol = 4))
   colnames(team_box_score) = c('assists', 'field_goals_made', 'free_throws_made', 'pace')
   url = paste("http://www.espn.com/nba/hollinger/teamstats/_/year/", year, sep = "")
@@ -73,30 +73,32 @@ running_per = function(team_acronym, playbyplay, players_and_teams, player, game
   team_name = team[length(team)]
   team_box_score$pace = yearly_team_stats[which(grepl(city, yearly_team_stats$'NULL.V2') | grepl(team_name, yearly_team_stats$'NULL.V2')),]$'NULL.V3'
   player_pers = c()
+  player_box_score$'field_goals_attempted' = 0
+  player_box_score$'field_goals_made' = 0
   for (play_index in 1:nrow(all_plays)) {
-    results = parse_play(team_acronym, player, player_box_score, team_box_score, all_plays[play_index,])[1]
-    player_box_score = results[1]
-    team_box_score = results[2]
-    player_pers = c(player_pers, calculate_per)
+    player_box_score = parse_play(team_acronym, player, player_box_score, team_box_score, all_plays[play_index,])
+    print(player_box_score$field_goals_made)
+    print(player_box_score$field_goals_attempted)
+    player_pers = c(player_pers, player_box_score$field_goals_made/player_box_score$field_goals_attempted)
   }
-  all_plays$player_per = player_pers
-  return (all_plays)
+  return (player_pers)
 }
 
 parse_play = function(acronym, player, player_box_score, team_box_score, play_vector) {
-  affecting_events = c(2,4,6,3,1,5,7)
-  if (play_vector$Event_Msg_Type %in% affecting_events) {
-    if (grepl(acronym, play_vector$'Description')) {
-      if (play_vector$Event_Msg_Type == 2) {
-        if player_box_score$field_goals_attempted = player_box_score$field_goals_attempted += 1 
-      }
+  player_split = strsplit(player, " ")[[1]]
+  last_name = player_split[2:length(player_split)]
+  if (grepl(last_name, play_vector$'Description')) {
+    if (grepl("Made", play_vector$'Description')) {
+      player_box_score$field_goals_made = player_box_score$'field_goals_made' + 1
+      player_box_score$field_goals_attempted = player_box_score$'field_goals_attempted' + 1
+    }
+      if (grepl("Missed", play_vector$'Description')) {
+      player_box_score$field_goals_attempted = player_box_score$'field_goals_attempted' + 1
     }
   }
+  return (player_box_score)
 }
-for (num in affecting_events) {
-  print(num)  
-  print(unique(playbyplay[which(playbyplay$Event_Msg_Type == num),'Description']))
-}
+
 running_per('CHI', playbyplay, players_and_teams, 'Chris Duhon', 20600001)
 ```
 
